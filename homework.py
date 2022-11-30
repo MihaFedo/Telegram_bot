@@ -28,8 +28,8 @@ LAST_MESSAGE_TEXT_DICT = {
 
 
 def send_message(bot, message):
-    """Отправка сообщения пользователю при условии,
-    что новое сообщение отличается от предыдущего.
+    """Отправка сообщения пользователю, если сообщение не повторяется.
+    Проверка, что новое сообщение отличается от предыдущего.
     """
     try:
         if LAST_MESSAGE_TEXT_DICT['last_text'] != message:
@@ -84,7 +84,7 @@ def check_response(response):
 
 
 def count_homeworks(response):
-    """Определение кол-ва ДЗ в списке, полученном от API"""
+    """Определение кол-ва ДЗ в списке, полученном от API."""
     count_homeworks = len(response.get('homeworks'))
     return count_homeworks
 
