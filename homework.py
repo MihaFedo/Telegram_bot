@@ -26,19 +26,25 @@ LAST_MESSAGE_TEXT_DICT = {
     'last_text': ''
 }
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 
 def send_message(bot, message):
     """Отправка сообщения пользователю, если сообщение не повторяется.
     Проверка, что новое сообщение отличается от предыдущего.
     """
     try:
-        if LAST_MESSAGE_TEXT_DICT['last_text'] != message:
-            bot.send_message(
-                chat_id=TELEGRAM_CHAT_ID,
-                text=message
-            )
-            LAST_MESSAGE_TEXT_DICT['last_text'] = message
-            logger.debug(f'ОК - Сообщение отправлено с текстом: {message}')
+        #if LAST_MESSAGE_TEXT_DICT['last_text'] != message:
+        bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=message
+        )
+        LAST_MESSAGE_TEXT_DICT['last_text'] = message
+        logger.debug(f'ОК - Сообщение отправлено с текстом: {message}')
     except telegram.error.TelegramError as error:
         logger.error(f'Сообщение не отправлено: {error}')
 
@@ -148,25 +154,22 @@ def main():
                 current_timestamp = get_last_current_date(response)
                 homework = get_last_homework(response)
                 message = parse_status(homework)
-                send_message(bot, message)
+                if LAST_MESSAGE_TEXT_DICT['last_text'] != message:
+                    send_message(bot, message)
             else:
                 logger.info('Ответ API - статус домашки пока не обновился')
 
         except Exception as error:
             message_err = f'Сбой в работе программы: {error}'
             logger.error(message_err)
-            send_message(bot, message_err)
+            if LAST_MESSAGE_TEXT_DICT['last_text'] != message_err:
+                send_message(bot, message_err)
 
         finally:
             time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
     handler = StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
