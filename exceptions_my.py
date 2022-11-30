@@ -15,3 +15,6 @@ class HwStatusIsNotConsistentToDocs(Exception):
 
 class HomeworkListIsNull(Exception):
     pass
+
+class StopRepeatMessages(Exception):
+    pass

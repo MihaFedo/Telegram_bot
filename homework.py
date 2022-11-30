@@ -33,6 +33,8 @@ def send_message(bot, message):
     """Отправка сообщения пользователю при условии, что
     новое сообщение отличается от предыдущего.
     """
+    if LAST_MESSAGE_TEXT_DICT['last_text'] == message:
+        raise exc_my.StopRepeatMessages
     try:
         bot.send_message(
             chat_id=TELEGRAM_CHAT_ID,
@@ -112,49 +114,46 @@ def main():
         logger.critical('Отсутствуют переменные окружения')
         sys.exit('Отсутсвуют токены')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())
+    current_timestamp = 0
     while True:
         try:
             response = get_api_answer(current_timestamp)
-            if check_response(response) == True:
+            if check_response(response) is True:
                 current_timestamp = get_last_current_date(response)
                 homework = get_last_homework(response)
             message = parse_status(homework)
-            if LAST_MESSAGE_TEXT_DICT['last_text'] != message:
-                send_message(bot, message)
+            send_message(bot, message)
 
         except exc_my.HTTPStatusNotOK as error:
             message_err = f'Статус HTTP запроса не OK: {error}'
             logger.error(message_err)
-            if LAST_MESSAGE_TEXT_DICT['last_text'] != message_err:
-                send_message(bot, message_err)
+            send_message(bot, message_err)
 
         except exc_my.APIGetProblem as error:
             message_err = f'Проблема с доступом к API: {error}'
             logger.error(message_err)
-            if LAST_MESSAGE_TEXT_DICT['last_text'] != message_err:
-                send_message(bot, message_err)
+            send_message(bot, message_err)
 
         except KeyError as error:
             message_err = f'Проблема с ответом API: {error}'
             logger.error(message_err)
-            if LAST_MESSAGE_TEXT_DICT['last_text'] != message_err:
-                send_message(bot, message_err)
+            send_message(bot, message_err)
 
         except TypeError as error:
             message_err = f'Проблема с ответом API: {error}'
             logger.error(message_err)
-            if LAST_MESSAGE_TEXT_DICT['last_text'] != message_err:
-                send_message(bot, message_err)
+            send_message(bot, message_err)
 
-        except exc_my.HomeworkListIsNull as error:
+        except exc_my.HomeworkListIsNull:
             logger.info('Ответ API - статус домашки пока не обновился')
+
+        except exc_my.StopRepeatMessages:
+            logger.info('Попытка повторной отправки сообщения')
 
         except Exception as error:
             message_err = f'Сбой в работе программы: {error}'
             logger.error(message_err)
-            if LAST_MESSAGE_TEXT_DICT['last_text'] != message_err:
-                send_message(bot, message_err)
+            send_message(bot, message_err)
 
         finally:
             time.sleep(RETRY_PERIOD)
@@ -163,7 +162,9 @@ def main():
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     handler = StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
