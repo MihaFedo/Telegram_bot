@@ -38,7 +38,6 @@ def send_message(bot, message):
     Проверка, что новое сообщение отличается от предыдущего.
     """
     try:
-        #if LAST_MESSAGE_TEXT_DICT['last_text'] != message:
         bot.send_message(
             chat_id=TELEGRAM_CHAT_ID,
             text=message
