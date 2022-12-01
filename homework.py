@@ -7,6 +7,7 @@ import telegram
 import os
 from dotenv import load_dotenv
 from http import HTTPStatus
+# from exceptions_my import MessageNotSend
 
 load_dotenv()
 
@@ -33,11 +34,12 @@ formatter = logging.Formatter(
 )
 
 
-def send_message(bot, message):
+def send_message(bot: telegram.bot.Bot, message: str) -> None:
     """Отправка сообщения пользователю, если сообщение не повторяется.
     Проверка, что новое сообщение отличается от предыдущего.
     """
     try:
+        logger.info('Попытка отправить сообщение')
         bot.send_message(
             chat_id=TELEGRAM_CHAT_ID,
             text=message
@@ -46,9 +48,13 @@ def send_message(bot, message):
         logger.debug(f'ОК - Сообщение отправлено с текстом: {message}')
     except telegram.error.TelegramError as error:
         logger.error(f'Сообщение не отправлено: {error}')
+        # Вариант кода ниже не пропускает pytest, не понимаю, как это обойти:
+        # raise MessageNotSend(f'Сообщение не отправлено: {error}')
+        # Ошибка из pytest:  "AssertionError: Убедитесь, что ошибка отправки
+        # сообщения в Telegram логируется с уровнем `ERROR`.'
 
 
-def get_api_answer(current_timestamp):
+def get_api_answer(current_timestamp: int) -> dict:
     """Запрос к основному URL и преобразование ответа из json."""
     payload = {'from_date': current_timestamp}
     request_param = {
@@ -71,9 +77,9 @@ def get_api_answer(current_timestamp):
     return response
 
 
-def check_response(response):
+def check_response(response: dict) -> None:
     """Проверка соответствия документации ответа API."""
-    if isinstance(response, dict) is False:
+    if not isinstance(response, dict):
         raise TypeError('ошибка - ответ API не dict')
     if (
         'homeworks' not in response.keys()
@@ -82,19 +88,18 @@ def check_response(response):
         raise AttributeError(
             'ошибка - в ответе API нет нужных ключей - HW/date'
         )
-    if isinstance(response.get('homeworks'), list) is False:
+    if not isinstance(response.get('homeworks'), list):
         raise TypeError('ошибка - в ответе API по ключу homeworks не список')
     logger.info('ОК - структура ответа API соотв. документации')
-    return True
 
 
-def count_homeworks(response):
+def count_homeworks(response: dict) -> int:
     """Определение кол-ва ДЗ в списке, полученном от API."""
     count_homeworks = len(response.get('homeworks'))
     return count_homeworks
 
 
-def get_last_homework(response):
+def get_last_homework(response: dict) -> dict:
     """Получение инфо о последней домашней работе."""
     if len(response.get('homeworks')) == 0:
         logger.info('Ответ API - статус домашки пока не обновился')
@@ -103,13 +108,13 @@ def get_last_homework(response):
         return homework
 
 
-def get_last_current_date(response):
+def get_last_current_date(response: dict) -> int:
     """Получение текущего времени из последнего запроса."""
     current_date = response.get('current_date')
     return current_date
 
 
-def parse_status(homework):
+def parse_status(homework: dict) -> str:
     """Получение статуса ДЗ."""
     if (
         'homework_name' not in homework.keys()
@@ -131,16 +136,16 @@ def parse_status(homework):
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
-def check_tokens():
+def check_tokens() -> None:
     """1. Проверка доступности переменных окружения.
     2. Вывод в лог отсутствующих переменных.
     """
     return all((TELEGRAM_CHAT_ID, TELEGRAM_TOKEN, PRACTICUM_TOKEN))
 
 
-def main():
+def main() -> None:
     """Основная логика работы бота."""
-    if check_tokens() is False:
+    if not check_tokens():
         logger.critical('Отсутствуют переменные окружения')
         sys.exit('Отсутсвуют токены')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
